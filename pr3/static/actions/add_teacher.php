@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 
   // Перенаправление на страницу с преподавателями после добавления
-  header("Location: teachers_list.php");
+  header("Location: ../teachers_list.php");
   exit;
 }
 ?>
@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>Добавить преподавателя</title>
 </head>
 <body>
+<a href="../index.html">Go to main page</a>
+<a href="../teachers.php">go back</a>
 <h1>Добавить нового преподавателя</h1>
 
 <form method="POST" action="add_teacher.php">
@@ -57,8 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <button type="submit">Добавить преподавателя</button>
 </form>
-
 <br>
-<a href="../teachers_list.php">Назад к списку преподавателей</a>
 </body>
 </html>

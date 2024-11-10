@@ -11,31 +11,44 @@ $teacherId = $_GET['id']; // Пример: ?id=1
 $teacherRepo = new UserRepository();
 
 // Получаем информацию о преподавателе
-$teacher = $teacherRepo->getTeacherById($teacherId);
+$teacher = $teacherRepo->getTeacherById((int)$teacherId);
 
 if (!$teacher) {
   echo "Преподаватель не найден!";
   exit;
 }
 
+// Обработка формы редактирования
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  // Получаем данные из формы
+  // Если была нажата кнопка "Удалить преподавателя"
+  if (isset($_POST['delete']) && $_POST['delete'] === '1') {
+    // Удаляем преподавателя
+    if ($teacherRepo->deleteTeacher((int)$teacherId)) {
+      // Перенаправляем на страницу с преподавателями после удаления
+      header("Location: ../teachers_list.php");
+      exit;
+    } else {
+      echo "Ошибка при удалении преподавателя!";
+    }
+  }
+
+  // Если форма обновления была отправлена
   $fullName = $_POST['full_name'];
   $position = $_POST['position'];
   $mainWorkplace = $_POST['main_workplace'];
   $phones = $_POST['phones']; // Телефоны для обновления
 
   // Обновляем преподавателя
-  $teacherRepo->updateTeacher($teacherId, $fullName, $position, $mainWorkplace);
+  $teacherRepo->updateTeacher((int)$teacherId, $fullName, $position, $mainWorkplace);
 
   // Удаляем старые телефоны и добавляем новые
-  $teacherRepo->deleteTeacherPhones($teacherId); // Удаляем старые телефоны
+  $teacherRepo->deleteTeacherPhones((int)$teacherId); // Удаляем старые телефоны
   foreach ($phones as $phone) {
-    $teacherRepo->addTeacherPhone($teacherId, $phone);
+    $teacherRepo->addTeacherPhone((int)$teacherId, $phone);
   }
 
   // Перенаправление на страницу с преподавателями после обновления
-  header("Location: teachers_list.php");
+  header("Location: ../teachers_list.php");
   exit;
 }
 ?>
@@ -48,6 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>Редактировать преподавателя</title>
 </head>
 <body>
+<nav>
+  <a href="../index.html">Go to main page</a>
+  <a href="../teachers.php">go back</a>
+
+</nav>
 <h1>Редактировать преподавателя</h1>
 
 <form method="POST" action="edit_teacher.php?id=<?= $teacher->id ?>">
@@ -74,8 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   ?>
   <button type="submit">Обновить преподавателя</button>
 </form>
-
+<!-- Кнопка для удаления преподавателя -->
+<form method="POST" action="edit_teacher.php?id=<?= $teacher->id ?>"
+      onsubmit="return confirm('Вы уверены, что хотите удалить этого преподавателя?');">
+  <button type="submit" name="delete" value="1">Удалить преподавателя</button>
+</form>
 <br>
-<a href="../teachers_list.php">Назад к списку преподавателей</a>
+<a href="../teachers.php">Назад к списку преподавателей</a>
 </body>
 </html>

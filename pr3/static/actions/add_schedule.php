@@ -1,52 +1,46 @@
 <?php
 declare(strict_types=1);
 
-// Подключаем классы UserRepository и DayOfWeek
+// Подключаем репозиторий
 require_once '../php/UserRepository.php';
-require_once '../php/dto/DayOfWeek.php';
+
+// Создаем экземпляр репозитория
 $userRepository = new UserRepository();
-$id = $_GET['id'] ?? null;
-
-if ($id) {
-  $daySchedule = $userRepository->getDayScheduleById((int)$id);
-
-  if (!$daySchedule || !$daySchedule->id) {
-    echo "Расписание не найдено.";
-    exit;
-  }
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  // Получаем данные из формы
   $dayOfWeek = $_POST['day_of_week'];
   $classNumber = (int)$_POST['class_number'];
   $groupId = (int)$_POST['group_id'];
   $teacherId = (int)$_POST['teacher_id'];
   $subjectId = (int)$_POST['subject_id'];
-  if ($userRepository->updateDaySchedule((int)$id, $dayOfWeek, $classNumber,
-    $groupId, $teacherId, $subjectId)) {
-    header('Location: ../schedule.php');
+
+  // Добавляем новое расписание
+  $success = $userRepository->addSchedule($dayOfWeek, $classNumber, $groupId, $teacherId, $subjectId);
+
+  // Проверка на успешность добавления
+  if ($success) {
+    // Перенаправление на страницу с расписанием после успешного добавления
+    header("Location: ../schedule.php");
     exit;
   } else {
-    echo "Ошибка при обновлении расписания.";
+    echo "Ошибка при добавлении расписания!";
   }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Редактирование расписания</title>
+  <title>Добавить преподавателя</title>
 </head>
 <body>
-<nav>
-  <a href="../index.html">Go to main page</a>
-  <a href="../schedule.php">go back</a>
-</nav>
-<h1>Редактирование расписания</h1>
+<a href="../index.html">Go to main page</a>
+<a href="../schedule.php">go back</a>
+<h1>Добавить новое занятие</h1>
 
-<form action="edit_schedule.php?id=<?= $daySchedule->id ?>" method="POST">
+<form method="POST" action="add_schedule.php">
   <label for="day_of_week">День недели:</label>
   <select name="day_of_week" id="day_of_week" required>
     <option value="Monday">Понедельник</option>
@@ -97,7 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ?>
   </select><br>
 
-  <button type="submit">Сохранить изменения</button>
+  <button type="submit">Добавить в расписание</button>
 </form>
+<br>
 </body>
 </html>

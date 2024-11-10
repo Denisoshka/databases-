@@ -8,7 +8,7 @@ $userRepository = new UserRepository();
 $id = $_GET['id'] ?? null;
 
 if ($id) {
-  $subject = $userRepository->getSubjectById($id);
+  $subject = $userRepository->getSubjectById((int)$id);
 
   if (!isset($subject)) {
     echo "Предмет не найден.";
@@ -20,8 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $name = $_POST['name'];
 
   // Обновляем данные о предмете
-  if ($userRepository->updateSubject($id, $name)) {
-    header('Location: subjects.php');
+  if ($userRepository->updateSubject((int)$id, $name)) {
+    header('Location: ../subjects.php');
     exit;
   } else {
     echo "Ошибка при обновлении предмета.";
@@ -37,6 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>Редактировать предмет</title>
 </head>
 <body>
+<nav>
+  <a href="../index.html">Go to main page</a>
+  <a href="../subjects.php">go back</a>
+</nav>
 <h1>Редактирование предмета</h1>
 
 <form action="edit_subject.php?id=<?= $subject->id ?>" method="POST">

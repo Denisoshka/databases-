@@ -3,12 +3,19 @@ services:
   web:
     build: .
     container_name: php-apache-container-pr3
+    environment:
+      DB_HOST: db
+      DB_NAME: testdb
+      DB_USER: user
+      DB_PASS: password
     volumes:
       - ./static:/var/www/html
     ports:
       - "8000:80"
     depends_on:
       - db
+    networks:
+      - my_network
 
   db:
     image: mysql:8.0
@@ -23,6 +30,10 @@ services:
       - ./static/actions:/docker-entrypoint-initdb.d
     ports:
       - "3306:3306"
+    networks:
+      - my_network
 
 volumes:
   db_data:
+networks:
+  my_network:

@@ -2,9 +2,17 @@
 declare(strict_types=1);
 
 define("DB_HOST", getenv('DB_HOST'));
-define("DB_NAME", getenv('DB_PASS'));
+define("DB_NAME", getenv('DB_NAME'));
 define("DB_USER", getenv('DB_USER'));
 define("DB_PASS", getenv('DB_PASS'));
+
+require_once "dto/TeacherDTO.php";
+require_once "dto/SubjectDTO.php";
+require_once "dto/DayOfWeek.php";
+require_once "dto/GroupDTO.php";
+require_once "dto/GroupWorkloadDTO.php";
+require_once "dto/TeacherStudentLoadDTO.php";
+require_once "dto/TeacherWorkloadDTO.php";
 
 class UserRepository
 {
@@ -25,6 +33,33 @@ class UserRepository
     }
   }
 
+  public function resetDatabase(string $initSqlPath): void
+  {
+    try {
+      $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+      // Удаление базы данных, если она существует
+      $sql = 'DROP DATABASE IF EXISTS ' . DB_NAME;
+      $this->db->exec($sql);
+      echo 'Old database ' . DB_NAME . ' deleted successfully.<br>';
+
+      $sql = "CREATE DATABASE " . DB_NAME;
+      $this->db->exec($sql);
+      echo 'New database ' . DB_NAME . ' created successfully.<br>';
+
+      $this->db->exec("USE " . DB_NAME);
+
+      $sql = file_get_contents($initSqlPath);
+      if ($sql === false) {
+        throw new Exception("Error reading init.sql file");
+      }
+
+      $this->db->exec($sql);
+      echo 'Database ' . DB_NAME . ' restored successfully from init.sql.<br>';
+    } catch (PDOException|Exception $e) {
+      die("Error: " . $e->getMessage());
+    }
+  }
 
   /**
    * @return  TeacherDTO[]
@@ -54,7 +89,8 @@ class UserRepository
     return $teacherList; // Возвращаем массив объектов
   }
 
-  public function addTeacher(string $fullName, string $position, string $mainWorkplace): bool
+  public function addTeacher(string $fullName, string $position, string
+  $mainWorkplace): int
   {
     $stmt = $this->db->prepare("
         INSERT INTO teachers (full_name, position, main_workplace)
@@ -63,8 +99,9 @@ class UserRepository
     $stmt->bindParam(':full_name', $fullName, PDO::PARAM_STR);
     $stmt->bindParam(':position', $position, PDO::PARAM_STR);
     $stmt->bindParam(':main_workplace', $mainWorkplace, PDO::PARAM_STR);
-
-    return $stmt->execute(); // Возвращаем результат выполнения запроса
+    $stmt->execute();
+    return (int) $this->db->lastInsertId();
+// Возвращаем результат выполнения запроса
   }
 
   public function updateTeacher(int $id, string $fullName, string $position, string $mainWorkplace): bool
@@ -95,23 +132,30 @@ class UserRepository
     $stmt->bindParam(':id', $id, PDO::PARAM_INT);
     $stmt->execute();
 
-    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Получаем все строки данных о преподавателе и его телефонах
+    $teacherData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if ($teacher) {
-      $f = new TeacherDTO();
-      $f->id = (int)$teacher['id'];
-      $f->fullName = $teacher['full_name'];
-      $f->position = $teacher['position'];
-      $f->mainWorkplace = $teacher['main_workplace'];
-      $f->phones = array();
-      foreach ($teacher as $phone) {
-        $f->phones[] = $phone['phone_number'];
-      }
-
-      return $f;
+    if (empty($teacherData)) {
+      return null; // Если данных нет, возвращаем null
     }
 
-    return null;
+    // Создаем объект TeacherDTO
+    $teacher = new TeacherDTO();
+    $teacher->id = (int)$teacherData[0]['id'];
+    $teacher->fullName = $teacherData[0]['full_name'];
+    $teacher->position = $teacherData[0]['position'];
+    $teacher->mainWorkplace = $teacherData[0]['main_workplace'];
+
+    $teacher->phones = [];
+
+    // Добавляем телефоны к преподавателю
+    foreach ($teacherData as $row) {
+      if (!empty($row['phone_number'])) {
+        $teacher->phones[] = $row['phone_number'];
+      }
+    }
+
+    return $teacher;
   }
 
   /**
@@ -155,7 +199,19 @@ class UserRepository
 
     return $stmt->execute(); // Возвращаем результат выполнения запроса
   }
+  public function deleteTeacher(int $teacherId): bool
+  {
+    // Удаляем все телефоны преподавателя
+    $stmt = $this->db->prepare("DELETE FROM phones WHERE teacher_id = :teacher_id");
+    $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
+    $stmt->execute();
 
+    // Удаляем преподавателя из таблицы teachers
+    $stmt = $this->db->prepare("DELETE FROM teachers WHERE id = :teacher_id");
+    $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
+
+    return $stmt->execute(); // Возвращаем результат выполнения запроса
+  }
   /**
    * @return SubjectDTO[]
    */
@@ -289,50 +345,97 @@ class UserRepository
   public function getWeekSchedule(): array
   {
     $stmt = $this->db->prepare("
-            SELECT s.id, s.day_of_week, s.class_number, s.group_id, s.teacher_id, s.subject_id
-            FROM schedule s
-            ORDER BY FIELD(s.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'), s.class_number
+            SELECT 
+                s.id AS schedule_id,
+                s.day_of_week,
+                s.class_number,
+                g.id AS group_id, g.group_number, g.student_count, g.leader,
+                t.id AS teacher_id, t.full_name, t.position, t.main_workplace,
+                subj.id AS subject_id, subj.name AS subject_name,
+                p.phone_number
+            FROM 
+                schedule s
+            JOIN 
+                `groups` g ON s.group_id = g.id
+            JOIN 
+                teachers t ON s.teacher_id = t.id
+            LEFT JOIN 
+                phones p ON t.id = p.teacher_id
+            JOIN 
+                subjects subj ON s.subject_id = subj.id
+            ORDER BY 
+                s.day_of_week, s.class_number
         ");
     $stmt->execute();
 
-    $schedule = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $schedules = [];
+    $results = $stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_ASSOC);
 
-    $scheduleDTOs = [];
-    foreach ($schedule as $day) {
-      $dto = new DayOfWeek();
-      $dto->id = (int)$day['id'];
-      $dto->dayOfWeek = $day['day_of_week'];
-      $dto->classNumber = (int)$day['class_number'];
-      $dto->groupId = (int)$day['group_id'];
-      $dto->teacherId = (int)$day['teacher_id'];
-      $dto->subjectId = (int)$day['subject_id'];
-      $scheduleDTOs[] = $dto;
+    foreach ($results as $schedule_id => $rows) {
+      $firstRow = $rows[0];
+
+      $schedule = new DayOfWeek();
+
+      $schedule->id = (int)$schedule_id;
+      $schedule->dayOfWeek = $firstRow['day_of_week'];
+      $schedule->classNumber = (int)$firstRow['class_number'];
+      $schedule->group = $this->getGroupById((int)$firstRow['group_id']);
+      $schedule->teacher = $this->getTeacherById((int)$firstRow['teacher_id']);
+      $schedule->subject = $this->getSubjectById((int)$firstRow['subject_id']);
+
+      $schedules[] = $schedule;
     }
 
-    return $scheduleDTOs;
+    return $schedules;
   }
 
   // Метод для получения расписания по ID
   public function getDayScheduleById(int $id): ?DayOfWeek
   {
-    $stmt = $this->db->prepare("SELECT id, day_of_week, class_number, group_id, teacher_id, subject_id FROM schedule WHERE id = :id");
+    $stmt = $this->db->prepare("
+        SELECT 
+            s.id AS schedule_id,
+            s.day_of_week,
+            s.class_number,
+            g.id AS group_id, g.group_number, g.student_count, g.leader,
+            t.id AS teacher_id, t.full_name, t.position, t.main_workplace,
+            subj.id AS subject_id, subj.name AS subject_name,
+            p.phone_number
+        FROM 
+            schedule s
+        JOIN 
+            `groups` g ON s.group_id = g.id
+        JOIN 
+            teachers t ON s.teacher_id = t.id
+        LEFT JOIN 
+            phones p ON t.id = p.teacher_id
+        JOIN 
+            subjects subj ON s.subject_id = subj.id
+        WHERE 
+            s.id = :id
+        ORDER BY 
+            s.day_of_week, s.class_number
+    ");
     $stmt->bindParam(':id', $id, PDO::PARAM_INT);
     $stmt->execute();
 
-    $day = $stmt->fetch(PDO::FETCH_ASSOC);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if ($day) {
-      $dto = new DayOfWeek();
-      $dto->id = (int)$day['id'];
-      $dto->dayOfWeek = $day['day_of_week'];
-      $dto->classNumber = (int)$day['class_number'];
-      $dto->groupId = (int)$day['group_id'];
-      $dto->teacherId = (int)$day['teacher_id'];
-      $dto->subjectId = (int)$day['subject_id'];
-      return $dto;
+    if (empty($rows)) {
+      return null; // No schedule found for the given ID
     }
 
-    return null;
+    $firstRow = $rows[0];
+
+    $schedule = new DayOfWeek();
+    $schedule->id = (int) $firstRow['schedule_id'];
+    $schedule->dayOfWeek = $firstRow['day_of_week'];
+    $schedule->classNumber = (int)$firstRow['class_number'];
+    $schedule->group = $this->getGroupById((int)$firstRow['group_id']);
+    $schedule->teacher = $this->getTeacherById((int)$firstRow['teacher_id']);
+    $schedule->subject = $this->getSubjectById((int)$firstRow['subject_id']);
+
+    return $schedule;
   }
 
   // Метод для обновления расписания
@@ -352,6 +455,9 @@ class UserRepository
     return $stmt->execute();
   }
 
+  /**
+   * @return  TeacherWorkloadDTO[]
+   * */
   public function getTeacherWorkload(): array
   {
     $stmt = $this->db->prepare("
@@ -375,12 +481,127 @@ class UserRepository
 
     foreach ($result as $row) {
       $f = new TeacherWorkloadDTO();
-      (int)$row['id'],
-$f->fullName = $row['full_name'],
-        $f->workload = (int)$row['workload']
-        $workloadDTOs[] = $f
+      $f->id = (int)$row['id'];
+      $f->fullName = $row['full_name'];
+      $f->workload = (int)$row['workload'];
+      $workloadDTOs[] = $f;
     }
 
     return $workloadDTOs;
   }
+
+  /**
+   * @return GroupWorkloadDTO[]
+   * */
+  public function getGroupWorkload(): array
+  {
+    $stmt = $this->db->prepare("
+        SELECT 
+            workload.group_number,
+            workload.day_of_week AS day_with_lowest_workload,
+            workload.class_count
+        FROM (
+            SELECT 
+                g.group_number,
+                s.day_of_week,
+                COUNT(s.class_number) AS class_count
+            FROM 
+                `groups` g
+            JOIN 
+                schedule s ON s.group_id = g.id
+            GROUP BY 
+                g.id, g.group_number, s.day_of_week
+        ) AS workload
+        JOIN (
+            SELECT 
+                group_number,
+                MIN(day_count.class_count) AS min_class_count
+            FROM (
+                SELECT 
+                    g.group_number,
+                    s.day_of_week,
+                    COUNT(s.class_number) AS class_count
+                FROM 
+                    `groups` g
+                JOIN 
+                    schedule s ON s.group_id = g.id
+                GROUP BY 
+                    g.id, g.group_number, s.day_of_week
+            ) AS day_count
+            GROUP BY 
+                day_count.group_number
+        ) AS min_workload ON workload.group_number = min_workload.group_number 
+        AND workload.class_count = min_workload.min_class_count
+        ORDER BY workload.group_number
+    ");
+    $stmt->execute();
+
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $workloadDTOs = [];
+
+    foreach ($results as $row) {
+      $f = new GroupWorkloadDTO();
+      $f->groupNumber = $row['group_number'];
+      $f->dayWithLowestWorkload = $row['day_with_lowest_workload'];;
+      $f->classCount = $row["class_count"];
+      $workloadDTOs[] = $f;
+    }
+
+    return $workloadDTOs;
+  }
+
+  /**
+   * @return TeacherStudentLoadDTO[]
+   * */
+  public function getTeacherStudentCount(): array
+  {
+    $stmt = $this->db->prepare("
+        SELECT 
+            t.full_name AS teacher_name,
+            SUM(g.student_count) AS student_count  -- Используем SUM для подсчета студентов
+        FROM 
+            teachers t
+        JOIN 
+            schedule s ON s.teacher_id = t.id
+        JOIN 
+            `groups` g ON s.group_id = g.id
+        GROUP BY 
+            t.id, t.full_name
+        ORDER BY 
+            t.full_name
+    ");
+    $stmt->execute();
+
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $teacherLoadDTOs = [];
+
+    foreach ($results as $row) {
+      $f = new TeacherStudentLoadDTO();
+      $f->teacherName = $row['teacher_name'];
+      $f->studentCount = (int)$row['student_count'];
+      $teacherLoadDTOs[] = $f;
+    }
+
+    return $teacherLoadDTOs;
+  }
+
+  public function addSchedule(string $dayOfWeek, int $classNumber, int $groupId, int $teacherId, int $subjectId): bool
+  {
+    // Подготовка SQL запроса для вставки нового расписания
+    $stmt = $this->db->prepare("
+        INSERT INTO schedule (day_of_week, class_number, group_id, teacher_id, subject_id)
+        VALUES (:day_of_week, :class_number, :group_id, :teacher_id, :subject_id)
+    ");
+
+    // Привязка параметров
+    $stmt->bindParam(':day_of_week', $dayOfWeek, PDO::PARAM_STR);
+    $stmt->bindParam(':class_number', $classNumber, PDO::PARAM_INT);
+    $stmt->bindParam(':group_id', $groupId, PDO::PARAM_INT);
+    $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
+    $stmt->bindParam(':subject_id', $subjectId, PDO::PARAM_INT);
+
+    // Выполнение запроса
+    return $stmt->execute();
+  }
+
 }

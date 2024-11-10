@@ -36,6 +36,10 @@ if ($id) {
     <li><?= htmlspecialchars($phone) ?></li>
   <?php endforeach; ?>
 </ul>
+<p>
+  <a href="actions/edit_teacher.php?id=<?= $teacher->id
+  ?>">Редактировать</a>
+</p>
 <a href="teachers.php">Назад к списку преподавателей</a>
 </body>
 </html>

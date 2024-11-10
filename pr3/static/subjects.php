@@ -16,6 +16,9 @@ $subjects = $userRepository->getAllSubjects();
   <title>Предметы</title>
 </head>
 <body>
+<nav>
+  <a href="index.html">Go to main page</a>
+</nav>
 <h1>Список предметов</h1>
 <table border="1">
   <thead>
@@ -29,7 +32,8 @@ $subjects = $userRepository->getAllSubjects();
     <tr>
       <td><?= htmlspecialchars($subject->name) ?></td>
       <td>
-        <a href="edit_subject.php?id=<?= $subject->id ?>">Редактировать</a>
+        <a href="actions/edit_subject.php?id=<?= $subject->id
+        ?>">Редактировать</a>
       </td>
     </tr>
   <?php endforeach; ?>
@@ -37,7 +41,7 @@ $subjects = $userRepository->getAllSubjects();
 </table>
 
 <h2>Добавить новый предмет</h2>
-<form action="add_subject.php" method="POST">
+<form action="actions/add_subject.php" method="POST">
   <label for="name">Название:</label>
   <input type="text" name="name" id="name" required>
   <button type="submit">Добавить</button>

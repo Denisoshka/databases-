@@ -1,9 +1,13 @@
 <?php
-require_once 'php/UserRepository.php';
-require_once 'php/dto/TeacherWorkloadDTO.php';
+declare(strict_types=1);
 
-$userRepository = new UserRepository();
-$teachers = $userRepository->getTeacherWorkload();
+// Подключаем репозиторий преподавателей
+require_once 'php/UserRepository.php';
+
+// Получаем список всех преподавателей
+$teacherRepo = new UserRepository();
+$teachers = $teacherRepo->getAllTeachers(); // Метод для получения всех преподавателей
+
 ?>
 
 <!DOCTYPE html>
@@ -11,31 +15,55 @@ $teachers = $userRepository->getTeacherWorkload();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Нагрузка преподавателей</title>
+  <title>Список преподавателей</title>
 </head>
 <body>
-<h1>Нагрузка преподавателей</h1>
+<nav>
+  <a href="index.html">Go to main page</a>
+</nav>
+<h1>Список преподавателей</h1>
+
 <table border="1">
   <thead>
   <tr>
     <th>ID</th>
     <th>Ф.И.О. преподавателя</th>
-    <th>Нагрузка (часы)</th>
+    <th>Должность</th>
+    <th>Основное место работы</th>
+    <th>Телефоны</th>
     <th>Действия</th>
   </tr>
   </thead>
   <tbody>
   <?php foreach ($teachers as $teacher): ?>
     <tr>
-      <td><?= htmlspecialchars($teacher->id) ?></td>
+      <td><a href="teacher_detail.php?id=<?= urlencode((string)$teacher->id) ?>"><?= htmlspecialchars((string)$teacher->id) ?></td>
+
       <td><?= htmlspecialchars($teacher->fullName) ?></td>
-      <td><?= htmlspecialchars($teacher->workload) ?></td>
+      <td><?= htmlspecialchars($teacher->position) ?></td>
+      <td><?= htmlspecialchars($teacher->mainWorkplace) ?></td>
       <td>
-        <a href="teacher_detail.php?id=<?= $teacher->id ?>">Просмотреть</a>
+        <?php
+        // Получаем и выводим все номера телефонов для преподавателя
+        $phones = $teacherRepo->getTeacherPhones($teacher->id);
+        foreach ($phones as $phone) {
+          echo htmlspecialchars($phone) . "<br>";
+        }
+        ?>
+      </td>
+      <td>
+        <!-- Ссылка на редактирование преподавателя по ID -->
+        <a href="actions/edit_teacher.php?id=<?= $teacher->id
+        ?>">Редактировать</a>
       </td>
     </tr>
   <?php endforeach; ?>
   </tbody>
 </table>
+
+<br>
+<!-- Ссылка на форму добавления нового преподавателя -->
+<a href="actions/add_teacher.php">Добавить нового преподавателя</a>
 </body>
 </html>
+

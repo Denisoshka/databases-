@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $userRepository = new UserRepository();
 
   if ($userRepository->addGroup($groupNumber, $studentCount, $leader)) {
-    header('Location: groups.php');
+    header('Location: ../groups.php');
     exit;
   } else {
     echo "Ошибка при добавлении группы.";

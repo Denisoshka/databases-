@@ -8,7 +8,7 @@ $userRepository = new UserRepository();
 $id = $_GET['id'] ?? null;
 
 if ($id) {
-  $group = $userRepository->getGroupById($id);
+  $group = $userRepository->getGroupById((int)$id);
 
   if (!$group) {
     echo "Группа не найдена.";
@@ -22,8 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $leader = $_POST['leader'];
 
   // Обновляем данные о группе
-  if ($userRepository->updateGroup($id, $groupNumber, $studentCount, $leader)) {
-    header('Location: groups.php');
+  if ($userRepository->updateGroup((int)$id, $groupNumber, $studentCount,
+    $leader)) {
+    header('Location: ../groups.php');
     exit;
   } else {
     echo "Ошибка при обновлении группы.";

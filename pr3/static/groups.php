@@ -2,6 +2,13 @@
 declare(strict_types=1);
 // Подключаем классы UserRepository и GroupDTO
 require_once 'php/UserRepository.php';
+require_once "php/dto/TeacherDTO.php";
+require_once "php/dto/SubjectDTO.php";
+require_once "php/dto/DayOfWeek.php";
+require_once "php/dto/GroupDTO.php";
+require_once "php/dto/GroupWorkloadDTO.php";
+require_once "php/dto/TeacherStudentLoadDTO.php";
+require_once "php/dto/TeacherWorkloadDTO.php";
 
 $userRepository = new UserRepository();
 $groups = $userRepository->getAllGroups();
@@ -15,6 +22,9 @@ $groups = $userRepository->getAllGroups();
   <title>Список групп</title>
 </head>
 <body>
+<nav>
+  <a href="index.html">Go to main page</a>
+</nav>
 <h1>Список групп</h1>
 <table border="1">
   <thead>
@@ -32,7 +42,7 @@ $groups = $userRepository->getAllGroups();
       <td><?= $group->studentCount ?></td>
       <td><?= htmlspecialchars($group->leader) ?></td>
       <td>
-        <a href="edit_group.php?id=<?= $group->id ?>">Редактировать</a>
+        <a href="actions/edit_group.php?id=<?= $group->id ?>">Редактировать</a>
       </td>
     </tr>
   <?php endforeach; ?>
@@ -40,7 +50,7 @@ $groups = $userRepository->getAllGroups();
 </table>
 
 <h2>Добавить новую группу</h2>
-<form action="add_group.php" method="POST">
+<form action="actions/add_group.php" method="POST">
   <label for="group_number">Номер группы:</label>
   <input type="text" name="group_number" id="group_number" required>
   <br>
