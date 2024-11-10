@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <form method="POST" action="edit_teacher.php?id=<?= $teacher->id ?>">
   <label for="full_name">Ф.И.О. преподавателя:</label>
   <input type="text" id="full_name" name="full_name"
-         value="<?= htmlspecialchars($teacher->full_name) ?>" required><br>
+         value="<?= htmlspecialchars($teacher->fullName) ?>" required><br>
 
   <label for="position">Должность:</label>
   <input type="text" id="position" name="position"
@@ -61,14 +61,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <label for="main_workplace">Основное место работы:</label>
   <input type="text" id="main_workplace" name="main_workplace"
-         value="<?= htmlspecialchars($teacher->main_workplace) ?>"><br>
+         value="<?= htmlspecialchars($teacher->mainWorkplace) ?>"><br>
 
   <label for="phones">Телефоны:</label><br>
   <?php
   // Получаем телефоны для преподавателя
   $phones = $teacherRepo->getTeacherPhones($teacher->id);
   foreach ($phones as $index => $phone) {
-    echo '<input type="text" name="phones[]" value="' . htmlspecialchars($phone->phone_number) . '" placeholder="Телефон ' . ($index + 1) . '"><br>';
+    echo '<input type="text" name="phones[]" value="' . htmlspecialchars
+      ($phone) . '" placeholder="Телефон ' . ($index + 1) . '"><br>';
   }
   ?>
   <button type="submit">Обновить преподавателя</button>

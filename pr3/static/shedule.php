@@ -1,6 +1,8 @@
 <?php
+declare(strict_types=1);
+
 // Подключаем классы UserRepository и DayOfWeek
-require_once 'UserRepository.php';
+require_once 'php/UserRepository.php';
 
 $userRepository = new UserRepository();
 $schedule = $userRepository->getWeekSchedule();
@@ -35,7 +37,7 @@ $schedule = $userRepository->getWeekSchedule();
       <td><?= $day->teacherId ?></td>
       <td><?= $day->subjectId ?></td>
       <td>
-        <a href="edit_schedule.php?id=<?= $day->id ?>">Редактировать</a>
+        <a href="actions/edit_schedule.php?id=<?= $day->id ?>">Редактировать</a>
       </td>
     </tr>
   <?php endforeach; ?>

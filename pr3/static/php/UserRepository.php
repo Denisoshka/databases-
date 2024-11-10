@@ -26,6 +26,9 @@ class UserRepository
   }
 
 
+  /**
+   * @return  TeacherDTO[]
+   * */
   // Метод для получения всех преподавателей
   public function getAllTeachers(): array
   {
@@ -38,9 +41,6 @@ class UserRepository
     // Получаем данные как ассоциативный массив
     $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    /**
-     * @var TeacherDTO[] $teacherList
-     * */
     $teacherList = [];
     foreach ($teachers as $teacher) {
       $f = new TeacherDTO();
@@ -156,6 +156,9 @@ class UserRepository
     return $stmt->execute(); // Возвращаем результат выполнения запроса
   }
 
+  /**
+   * @return SubjectDTO[]
+   */
   // Метод для получения всех предметов
   public function getAllSubjects(): array
   {
@@ -213,6 +216,9 @@ class UserRepository
     return $stmt->execute();
   }
 
+  /**
+   * @return GroupDTO[]
+   */
   public function getAllGroups(): array
   {
     $stmt = $this->db->prepare("SELECT id, group_number, student_count, leader FROM `groups`");
@@ -277,6 +283,9 @@ class UserRepository
     return $stmt->execute();
   }
 
+  /**
+   * @return DayOfWeek[]
+   */
   public function getWeekSchedule(): array
   {
     $stmt = $this->db->prepare("
@@ -341,5 +350,37 @@ class UserRepository
     $stmt->bindParam(':subject_id', $subjectId, PDO::PARAM_INT);
     $stmt->bindParam(':id', $id, PDO::PARAM_INT);
     return $stmt->execute();
+  }
+
+  public function getTeacherWorkload(): array
+  {
+    $stmt = $this->db->prepare("
+        SELECT 
+            t.id,
+            t.full_name,
+            COUNT(s.id) AS workload
+        FROM 
+            teachers t
+        LEFT JOIN 
+            schedule s ON s.teacher_id = t.id
+        GROUP BY 
+            t.id,t.full_name 
+        ORDER BY 
+            t.full_name
+    ");
+    $stmt->execute();
+
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $workloadDTOs = [];
+
+    foreach ($result as $row) {
+      $f = new TeacherWorkloadDTO();
+      (int)$row['id'],
+$f->fullName = $row['full_name'],
+        $f->workload = (int)$row['workload']
+        $workloadDTOs[] = $f
+    }
+
+    return $workloadDTOs;
   }
 }

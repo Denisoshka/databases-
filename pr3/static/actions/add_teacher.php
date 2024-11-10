@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   // Добавляем телефоны
   foreach ($phones as $phone) {
-    $teacherRepo->addTeacherPhone($teacherId, $phone);
+    $teacherRepo->addTeacherPhone((int)$teacherId, $phone);
   }
 
   // Перенаправление на страницу с преподавателями после добавления

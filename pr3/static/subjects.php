@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 // Подключаем класс UserRepository и SubjectDTO
 require_once 'php/UserRepository.php';
 
