@@ -497,42 +497,25 @@ class UserRepository
   {
     $stmt = $this->db->prepare("
         SELECT 
-            workload.group_number,
-            workload.day_of_week AS day_with_lowest_workload,
-            workload.class_count
-        FROM (
-            SELECT 
-                g.group_number,
-                s.day_of_week,
-                COUNT(s.class_number) AS class_count
-            FROM 
-                `groups` g
-            JOIN 
-                schedule s ON s.group_id = g.id
-            GROUP BY 
-                g.id, g.group_number, s.day_of_week
-        ) AS workload
-        JOIN (
-            SELECT 
-                group_number,
-                MIN(day_count.class_count) AS min_class_count
+            g.group_number,
+            s.day_of_week,
+            COUNT(s.id) AS class_count
+        FROM 
+            `groups` g
+        JOIN 
+            schedule s ON s.group_id = g.id
+        GROUP BY 
+            g.id, s.day_of_week, g.group_number
+        HAVING COUNT(s.id) = (
+            SELECT MIN(class_count)
             FROM (
-                SELECT 
-                    g.group_number,
-                    s.day_of_week,
-                    COUNT(s.class_number) AS class_count
-                FROM 
-                    `groups` g
-                JOIN 
-                    schedule s ON s.group_id = g.id
-                GROUP BY 
-                    g.id, g.group_number, s.day_of_week
-            ) AS day_count
-            GROUP BY 
-                day_count.group_number
-        ) AS min_workload ON workload.group_number = min_workload.group_number 
-        AND workload.class_count = min_workload.min_class_count
-        ORDER BY workload.group_number
+                SELECT COUNT(s.id) AS class_count
+                FROM schedule s
+                WHERE s.group_id = g.id
+                GROUP BY s.day_of_week
+            ) AS subquery
+        )
+        ORDER BY g.group_number
     ");
     $stmt->execute();
 
@@ -540,11 +523,11 @@ class UserRepository
     $workloadDTOs = [];
 
     foreach ($results as $row) {
-      $f = new GroupWorkloadDTO();
-      $f->groupNumber = $row['group_number'];
-      $f->dayWithLowestWorkload = $row['day_with_lowest_workload'];;
-      $f->classCount = $row["class_count"];
-      $workloadDTOs[] = $f;
+      $dto = new GroupWorkloadDTO();
+      $dto->groupNumber = $row['group_number'];
+      $dto->dayWithLowestWorkload = $row['day_of_week'];
+      $dto->classCount = (int)$row['class_count'];
+      $workloadDTOs[] = $dto;
     }
 
     return $workloadDTOs;

@@ -14,6 +14,9 @@ $groups = $userRepository->getGroupWorkload();
   <title>Нагрузка по группам</title>
 </head>
 <body>
+<nav>
+  <a href="index.html">Go to main page</a>
+</nav>
 <h1>Нагрузка по группам</h1>
 <table border="1">
   <thead>
